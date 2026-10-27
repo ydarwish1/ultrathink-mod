@@ -1,0 +1,11 @@
+{
+  "name": "ultrathink-mod",
+  "version": "0.1.0",
+  "description": "One bar above the prompt: context, prompt cache, 5-hour and 7-day limits, effort, and a rainbow Ultrathink button that runs your next message (or the rest of this turn) at xhigh.",
+  "author": { "name": "Yusif Darwish" },
+  "homepage": "https://github.com/ydarwish1/ultrathink-mod",
+  "repository": "https://github.com/ydarwish1/ultrathink-mod",
+  "license": "MIT",
+  "keywords": ["ultrathink", "effort", "mod", "usage", "cache"],
+  "types": "./types/index.d.ts"
+}

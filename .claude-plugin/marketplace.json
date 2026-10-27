@@ -1,0 +1,12 @@
+{
+  "name": "ultrathink-mod",
+  "description": "A Claude Code mod: one bar above the prompt with your usage and a rainbow Ultrathink button",
+  "owner": { "name": "Yusif Darwish" },
+  "plugins": [
+    {
+      "name": "ultrathink-mod",
+      "source": "./",
+      "description": "Context, prompt cache, 5-hour and 7-day limits, effort, and a rainbow Ultrathink button above the prompt"
+    }
+  ]
+}
