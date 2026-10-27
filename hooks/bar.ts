@@ -107,6 +107,49 @@ export function ringSvg(percent: number, color: string): string {
   )
 }
 
+/** The desktop's key cap at rest, and while Ultrathink is on. */
+export type CapLook = 'rest' | 'on'
+
+const CAP_COLORS: Record<CapLook, { cap: string; key: string }> = {
+  rest: { cap: '#353432', key: '#4a4945' },
+  on: { cap: '#2f2638', key: '#9B82C8' },
+}
+
+// The cap's measures, in CSS pixels, as the chosen design has them: a 3px inset,
+// a 26px key, a 6px gap, the word (65px as the desktop's system font sets it at
+// 14px semibold, pinned with textLength so the cap always fits it), 10px after.
+const WORD_W = 65
+export const CAP_W = 3 + 26 + 6 + WORD_W + 10
+export const CAP_H = 28
+
+/**
+ * The desktop's key cap as one SVG: a rounded button with a rounded ⚡ key on
+ * its left and the rainbow word. While on, a lighter band runs through the
+ * letters; the animation is the SVG's own, so nothing redraws.
+ */
+export function capSvg(look: CapLook): string {
+  const c = CAP_COLORS[look]
+  const word = [...WORD].map((ch, i) => `<tspan class="l${i}" fill="${RAINBOW[i % 7]}">${ch}</tspan>`).join('')
+  const shimmer =
+    look === 'rest'
+      ? ''
+      : [...WORD]
+          .map(
+            (_, i) =>
+              `@keyframes k${i}{0%,60%,100%{fill:${RAINBOW[i % 7]}}30%{fill:${SHIMMER[i % 7]}}}` +
+              `.l${i}{animation:k${i} 1.1s linear ${(i * 0.08).toFixed(2)}s infinite}`,
+          )
+          .join('') + '@media (prefers-reduced-motion:reduce){tspan{animation:none}}'
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${CAP_W}" height="${CAP_H}" viewBox="0 0 ${CAP_W} ${CAP_H}">` +
+    `<style>text{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;font-size:14px;font-weight:600}${shimmer}</style>` +
+    `<rect width="${CAP_W}" height="${CAP_H}" rx="8" fill="${c.cap}"/>` +
+    `<rect x="3" y="3" width="26" height="${CAP_H - 6}" rx="6" fill="${c.key}"/>` +
+    `<text x="16" y="19" font-size="13" text-anchor="middle">⚡</text>` +
+    `<text x="35" y="19" textLength="${WORD_W}" lengthAdjust="spacing">${word}</text></svg>`
+  )
+}
+
 /** A span of time, short: 45m, 3h 10m, 2d 4h. */
 export function span(ms: number): string {
   const mins = Math.max(0, Math.round(ms / 60000))

@@ -22,6 +22,6 @@ export type UltrathinkState = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'ultrathink-mod': { meters: UltrathinkMeters; lastAt: number; ultra: UltrathinkState }
+    'ultrathink-mod': { meters: UltrathinkMeters; lastAt: number; ultra: UltrathinkState; isCompacting: boolean }
   }
 }

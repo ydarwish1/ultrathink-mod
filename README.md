@@ -3,23 +3,23 @@
 A free mod for Claude Code. It adds one bar above your prompt:
 
 ```text
-○ 9% context  ○ 5% 5h  ◑ 42% 7d  ● warm 53m cache  effort high      0: ⚡ ultrathink
+○ 9% context  ○ 5% 5h  ◑ 42% 7d  ● warm 53m cache      0: ⚡ ultrathink  9: Compact
 ```
 
 - **context**: how full the context window is.
 - **5h** and **7d**: how much of your 5-hour and 7-day usage you have used.
 - **cache**: whether the prompt cache is warm (with the minutes left) or cold. It counts one hour from the last request.
-- **effort**: the effort level your requests run at.
 - **⚡ ultrathink**: a button in the same rainbow letters Claude Code uses for the word ultrathink.
+- **Compact**: runs `/compact`. It hides while Claude works. From 70% context it becomes **Compact now**, the main button.
 
-In the Desktop app each meter is a ring. In the terminal it is a circle that fills by quarters.
+In the Desktop app each meter is a ring, and the Ultrathink button is a rounded key cap with a ⚡ key. While Ultrathink is on, the cap turns violet and the word shimmers. In the terminal each meter is a circle that fills by quarters.
 
 It works in the terminal and in the Claude Desktop app. It makes no model calls: it reads Claude Code's own figures.
 
 ## The Ultrathink button
 
 - **Before you send:** press it, and your next message runs at `xhigh` effort. The word shimmers while it is on.
-- **While Claude works:** press it, and the rest of that turn runs at `xhigh`. The effort meter shows `xhigh` for that turn.
+- **While Claude works:** press it, and the rest of that turn runs at `xhigh`.
 - **Press again** to cancel.
 
 How to press it:

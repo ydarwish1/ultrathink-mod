@@ -1,6 +1,6 @@
-// ultrathink-mod: one bar above the prompt with the context window, the prompt
-// cache, the 5-hour and 7-day limits, the effort level, and an Ultrathink button
-// in the rainbow letters Claude Code paints the word ultrathink in.
+// ultrathink-mod: one bar above the prompt with the context window, the 5-hour
+// and 7-day limits, the prompt cache, an Ultrathink button in the rainbow
+// letters Claude Code paints the word ultrathink in, and a Compact button.
 //
 // The button, before you send, runs your next message at xhigh; while Claude
 // works, it raises the rest of that turn; a second press cancels. /ultra does the
@@ -11,8 +11,9 @@
 //
 // The terminal draws the meters as circle glyphs and the button as a Button
 // (type 0 into an empty prompt to press it). The desktop draws each meter as a
-// ring and the button as a Client (ultra-client.tsx), since a desktop Button is
-// native and drops the letters' colors.
+// ring and the button as a key cap: a picture (capSvg) with a Client over it
+// for the click (ultra-client.tsx).
+// Beside it, Compact runs /compact (9).
 //
 // No model calls: the bar reads the engine's own figures and draws.
 
@@ -21,8 +22,8 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type { UltrathinkMeters, UltrathinkState } from '../types'
 import {
-  BLUE, ORANGE, VIOLET, WORD,
-  boosted, cacheOf, contextPercent, letters, nameOf, noteFor, pie, ringSvg, target, usedColor, usedOf, windowsOf,
+  BLUE, CAP_H, CAP_W, ORANGE, WORD,
+  boosted, cacheOf, capSvg, contextPercent, letters, nameOf, noteFor, pie, ringSvg, target, usedColor, usedOf, windowsOf,
 } from './bar'
 import type { UltraProps } from './ultra-client'
 
@@ -31,6 +32,10 @@ const IDLE: UltrathinkState = { armed: false, pending: false, boostTurn: null, c
 const meters = atom({ plugin: 'ultrathink-mod', key: 'meters' } as const, { context: null, windows: [] } as UltrathinkMeters)
 const lastAt = atom({ plugin: 'ultrathink-mod', key: 'lastAt' } as const, 0)
 const ultra = atom({ plugin: 'ultrathink-mod', key: 'ultra' } as const, IDLE)
+const isCompacting = atom({ plugin: 'ultrathink-mod', key: 'isCompacting' } as const, false)
+
+/** From this full, the Compact button becomes the main action. */
+const COMPACT_NUDGE = 70
 
 /** How often the bar redraws, so the cache countdown stays current. */
 const TICK_MS = 30_000
@@ -63,6 +68,19 @@ function syncShimmer($: EngineInterface, s: UltrathinkState): void {
 async function pull($: EngineInterface): Promise<void> {
   const u = await $.session.usage()
   await update($, meters, () => ({ context: contextPercent(u.context), windows: windowsOf(u.rateLimits) }))
+}
+
+// Compact runs Claude Code's own /compact, so its usual progress and result show.
+// Work a press starts ends with the press and would cancel the compaction, so a
+// timer runs it in a dispatch of its own that lasts until the compaction ends.
+function compact($: EngineInterface): void {
+  void update($, isCompacting, () => true)
+  $.clock.after(1, () =>
+    $.command
+      .run({ command: 'compact' })
+      .catch((error: unknown) => $.ui.toast(`Compacting failed: ${error instanceof Error ? error.message : String(error)}`))
+      .finally(() => update($, isCompacting, () => false)),
+  )
 }
 
 // What a press does: while a turn runs, raise (or lower) the rest of it;
@@ -205,7 +223,6 @@ export const register: Register = on => {
     const live = e.props.isWorking && s.currentTurn !== null
     const isBoosting = live && s.boostTurn === s.currentTurn
     const isArmed = !live && (s.armed || s.pending)
-    const level = isBoosting ? (boosted(s.model, s.effort) ?? s.effort) : s.effort
 
     // A meter: its ring (an Svg on the desktop, a circle glyph in the terminal), its figure, its name.
     const meter = (key: string, percent: number, color: string, value: string, name: string) => (
@@ -223,22 +240,28 @@ export const register: Register = on => {
       m.context !== null ? meter('context', m.context, usedColor(m.context), `${m.context}%`, 'context') : null,
       ...m.windows.map(w => meter(`w-${w.kind}`, usedOf(w), usedColor(usedOf(w)), `${usedOf(w)}%`, nameOf(w.kind))),
       cache ? meter('cache', cache.percentLeft, cache.isWarm ? ORANGE : BLUE, cache.text, 'cache') : null,
-      level ? (
-        <Box key="effort" flexDirection="row" flexShrink={0} alignItems="center" marginRight={2}>
-          <Text dimColor>effort </Text>
-          <Text color={isBoosting ? VIOLET : undefined} bold>
-            {level}
-          </Text>
-        </Box>
-      ) : null,
     ].filter(part => part !== null)
+
+    // Compact hides while a turn runs (it would cut the turn's own context) and while one runs.
+    const compactPart =
+      !e.props.isWorking && !(await read($, isCompacting)) ? (
+        (m.context ?? 0) >= COMPACT_NUDGE ? (
+          <Button key="compact" label="Compact now" hotkey="9" plain variant="primary" onPress={() => compact($)} />
+        ) : (
+          <Button key="compact" label="Compact" hotkey="9" plain dimColor onPress={() => compact($)} />
+        )
+      ) : null
 
     // While it is on, the word shimmers; nothing else is drawn beside it.
     const ultraProps: UltraProps = { isOn: isBoosting || isArmed, isWorking: Boolean(e.props.isWorking) }
     const word = letters(WORD, ultraProps.isOn ? frame : null)
+    // The desktop's key cap: its picture, and the Client that takes the click, laid over it.
     const ultraPart = desktop ? (
-      <Box key="ultra" flexDirection="row" flexShrink={0}>
-        <desktop.Client key="ultrathink" module="./ultra-client.tsx" props={ultraProps} />
+      <Box key="ultrathink-cap" position="relative" flexShrink={0}>
+        <desktop.Svg source={capSvg(ultraProps.isOn ? 'on' : 'rest')} alt="Ultrathink" width={CAP_W} height={CAP_H} />
+        <Box position="absolute" top={0} left={0} width="100%" height="100%">
+          <desktop.Client key="ultrathink" module="./ultra-client.tsx" props={ultraProps} width="100%" height="100%" />
+        </Box>
       </Box>
     ) : (
       <Box key="ultra" flexDirection="row" flexShrink={0}>
@@ -253,22 +276,31 @@ export const register: Register = on => {
       </Box>
     )
 
-    const mine = isWide ? (
-      <Box flexDirection="row" paddingX={1}>
-        {meterRow}
-        <Box key="grow" flexGrow={1} />
+    const buttons = (
+      <Box key="buttons" flexDirection="row" flexShrink={0} alignItems="center" columnGap={2}>
         {ultraPart}
-      </Box>
-    ) : (
-      <Box flexDirection="column" paddingX={1}>
-        {meterRow.length > 0 ? (
-          <Box key="meters" flexDirection="row" flexWrap="wrap">
-            {meterRow}
-          </Box>
-        ) : null}
-        {ultraPart}
+        {compactPart}
       </Box>
     )
+    const meterBox = (
+      <Box key="meters" flexDirection="row" flexWrap="wrap" flexShrink={1} alignItems="center">
+        {meterRow}
+      </Box>
+    )
+    // One row: the meters, then the buttons at the right. A narrow terminal stacks them.
+    const mine =
+      desktop || isWide ? (
+        <Box flexDirection="row" paddingX={1} alignItems="center">
+          {meterBox}
+          <Box key="grow" flexGrow={1} />
+          {buttons}
+        </Box>
+      ) : (
+        <Box flexDirection="column" paddingX={1}>
+          {meterRow.length > 0 ? meterBox : null}
+          {buttons}
+        </Box>
+      )
     const theirs = await next(e)
     return theirs ? (
       <Box flexDirection="column">
